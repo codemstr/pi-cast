@@ -1,0 +1,598 @@
+<html>
+	<head>
+		<title>Push notification server</title>
+		<basefont color="#fff" size="9">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+	<style>
+	body {
+		font: 13px 'Open Sans', "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+	   	background-color:black;
+   		background-repeat:no-repeat;
+   		background-size:cover;
+	}
+	div#clock {
+    		position:absolute; /* childs are abs. positionned */
+    		display:block;
+    		left: 20px;
+    		bottom: 10px;
+    		width:130px; height:130px; /* keep square */
+    		border-radius:50%; /* All round */
+    		margin:20px auto; /* as you want, or float left */
+    		transition: all 250ms linear; /* for mouseover effect */
+        		-webkit-transition:all 250ms linear;
+        		-moz-transition:all 250ms linear;
+        		-ms-transition:all 250ms linear;
+        		-o-transition:all 250ms linear;
+    	background:#FFF;
+    	background:rgba(255,255,255,0.16);
+    	background: linear-gradient(top, rgba(255,255,255,0) 0%,rgba(255,255,255,0.16) 100%);
+        background: -moz-linear-gradient(top, rgba(255,255,255,0) 0%, rgba(255,255,255,0.16) 100%);
+        background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,0)), color-stop(100%,rgba(255,255,255,0.16)));
+        background: -webkit-linear-gradient(top, rgba(255,255,255,0) 0%,rgba(255,255,255,0.16) 100%);
+        background: -o-linear-gradient(top, rgba(255,255,255,0) 0%,rgba(255,255,255,0.16) 100%);
+        background: -ms-linear-gradient(top, rgba(255,255,255,0) 0%,rgba(255,255,255,0.16) 100%);
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#29000000',GradientType=0 );
+    /* box-shadow:inset 0 0 3px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.3);
+        -moz-box-shadow:inset 0 0 3px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.3);
+        -webkit-box-shadow:inset 0 0 3px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.3);
+        -ms-box-shadow:inset 0 0 3px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.3);
+        -o-box-shadow:inset 0 0 3px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.3);*/
+    }
+    div#clock:hover {
+	font-color: #FFF;
+	background:#303030;
+    	background:rgba(255,255,255,0.16);
+        transform:scale(1.1);
+            -moz-transform:scale(1.1);
+            -webkit-transform:scale(1.1);
+            -ms-transform:scale(1.1);
+            -o-transform:scale(1.1);           
+    }
+
+/* ------- JS elements ------ */
+
+div.innerCenter {
+    position:absolute;
+    z-index:0;
+    top:50%; left:50%;
+    width:94px; height:94px; /* diameter */
+    margin:-47px 0 0 -47px; /* centered with half diameter */
+    border-radius:50%;
+    box-shadow:0 0 3px rgba(255,255,255,0.2), 0 0 10px rgba(255,255,255,0.2);
+        -moz-box-shadow:0 0 3px rgba(255,255,255,0.2), 0 0 10px rgba(255,255,255,0.2);
+        -webkit-box-shadow:0 0 3px rgba(255,255,255,0.2), 0 0 10px rgba(255,255,255,0.2);
+        -ms-box-shadow:0 0 3px rgba(255,255,255,0.2), 0 0 10px rgba(255,255,255,0.2);
+        -o-box-shadow:0 0 3px rgba(255,255,255,0.2), 0 0 10px rgba(255,255,255,0.2);
+}
+div.sec, div.min, div.hour {
+    position:absolute;
+    top:0px;
+    left:65px; /* half #clock width */
+    height:130px; /* #clock height */
+    /* transition: all 200ms linear; // rotate anticlockwise from 359° to >0° */
+}
+    div.sec {
+        width:1px;
+        z-index:10;
+    }
+    div.min {
+        width:2px;
+        left:64px; /* half #clock width minus half this width (-1px) */
+        z-index:11;
+    }
+    div.hour {
+        width:4px;
+        left:63px;
+        z-index:12;
+    }
+
+div.clockwise {
+    position:absolute;
+    left:0; right:0;
+    bottom:49%; /* center of the #clock inside hour,min,sec */
+    background:#FFF;
+    background:rgba(255,255,255,0.4);
+    border-radius:2px;
+    box-shadow:0 0 3px rgba(255,255,255,0.25);
+        -moz-box-shadow:0 0 3px rgba(255,255,255,0.25);
+        -webkit-box-shadow:0 0 3px rgba(255,255,255,0.25);
+        -ms-box-shadow:0 0 3px rgba(255,255,255,0.25);
+        -o-box-shadow:0 0 3px rgba(255,255,255,0.25);
+}
+    div.sec div.clockwise { top:18px; } /* dist from clock border */
+    div.min div.clockwise { top:24px; }
+    div.hour div.clockwise { top:28px; }
+   
+div.digit, div.time {
+    position:absolute;
+    z-index:5;
+    width:18px; height:18px;
+    font:10px/18px 'Orbitron', arial,verdana,sans-serif;
+    text-align:center;
+    color:#FFF;
+    color:rgba(255,255,255,0.33);
+    text-shadow:0 0 2px rgba(255,255,255,0.25);
+    /* border-radius:50%;
+    box-shadow:inset 0 0 3px rgba(255,255,255,0.3);
+        -moz-box-shadow:inset 0 0 3px rgba(255,255,255,0.3);
+        -webkit-box-shadow:inset 0 0 3px rgba(255,255,255,0.3);
+        -ms-box-shadow:inset 0 0 3px rgba(255,255,255,0.3);
+        -o-box-shadow:inset 0 0 3px rgba(255,255,255,0.3); */
+}
+    div.digit span {
+        color:rgba(255,255,255,0.75); /* 12, 3, 6 and 9 */
+    }
+
+div.time {
+    top:68%; left:50%;
+    width:130px; /* clock width */
+    height:12px; /* diameter */
+    margin:-6px 0 0 -65px; /* centered with half width*/
+    font:10px/12px 'Courrier New', 'Courier', serif;
+    text-align:center;
+    color:#FFF;
+    color:rgba(255,255,255,0.3);
+    /*text-shadow:0 1px 0 rgba(155,155,155,0.45);*/
+}
+	p { 
+	  color: whitesmoke;
+	}
+
+	#notification-bar {
+		top: 0px;
+    		border-radius: 25px;
+	}
+	@font-face {
+    font-family: 'weather';
+    src: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/93/artill_clean_icons-webfont.eot');
+    src: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/93/artill_clean_icons-webfont.eot?#iefix') format('embedded-opentype'),
+         url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/93/artill_clean_icons-webfont.woff') format('woff'),
+         url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/93/artill_clean_icons-webfont.ttf') format('truetype'),
+         url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/93/artill_clean_icons-webfont.svg#artill_clean_weather_iconsRg') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+#weather {
+  position: absolute;
+  width: 400px;
+  margin: 0px auto;
+  right: 80px;
+  bottom: 0px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+i {
+  color: #fff;
+  font-family: weather;
+  font-size: 80px;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1.0;
+}
+
+.icon-0:before { content: ":"; }
+.icon-1:before { content: "p"; }
+.icon-2:before { content: "S"; }
+.icon-3:before { content: "Q"; }
+.icon-4:before { content: "S"; }
+.icon-5:before { content: "W"; }
+.icon-6:before { content: "W"; }
+.icon-7:before { content: "W"; }
+.icon-8:before { content: "W"; }
+.icon-9:before { content: "I"; }
+.icon-10:before { content: "W"; }
+.icon-11:before { content: "I"; }
+.icon-12:before { content: "I"; }
+.icon-13:before { content: "I"; }
+.icon-14:before { content: "I"; }
+.icon-15:before { content: "W"; }
+.icon-16:before { content: "I"; }
+.icon-17:before { content: "W"; }
+.icon-18:before { content: "U"; }
+.icon-19:before { content: "Z"; }
+.icon-20:before { content: "Z"; }
+.icon-21:before { content: "Z"; }
+.icon-22:before { content: "Z"; }
+.icon-23:before { content: "Z"; }
+.icon-24:before { content: "E"; }
+.icon-25:before { content: "E"; }
+.icon-26:before { content: "3"; }
+.icon-27:before { content: "a"; }
+.icon-28:before { content: "A"; }
+.icon-29:before { content: "a"; }
+.icon-30:before { content: "A"; }
+.icon-31:before { content: "6"; }
+.icon-32:before { content: "1"; }
+.icon-33:before { content: "6"; }
+.icon-34:before { content: "1"; }
+.icon-35:before { content: "W"; }
+.icon-36:before { content: "1"; }
+.icon-37:before { content: "S"; }
+.icon-38:before { content: "S"; }
+.icon-39:before { content: "S"; }
+.icon-40:before { content: "M"; }
+.icon-41:before { content: "W"; }
+.icon-42:before { content: "I"; }
+.icon-43:before { content: "W"; }
+.icon-44:before { content: "a"; }
+.icon-45:before { content: "S"; }
+.icon-46:before { content: "U"; }
+.icon-47:before { content: "S"; }
+
+#weather h2 {
+  margin: -10px 0 -14px -10px;
+  color: #fff;
+  font-size: 60px;
+  font-weight: 100;
+  text-align: center;
+  text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+#weather ul {
+  margin-top: -10px;
+  padding: 10px;
+}
+
+#weather li {
+  background: #fff;
+  background: rgba(255,255,255,0.90);
+  padding: 3px;
+  margin: auto;	
+  font-size: 10px;
+  display: inline-block;
+  border-radius: 5px;
+  right: 0px;
+}
+
+#weather .currently {
+  margin: 0 10px;
+}
+#digitalClock {
+    height: 100px;
+    width: 100px;
+    margin: auto;
+    position: absolute;
+    bottom: 5px; right: 85px; 
+    padding-top: 5px;
+    font-family: courier, monospace;
+    text-align: center;
+    color: whitesmoke;
+    font-size: 60px;
+}
+#scrollContainer {
+  position:absolute;
+  height:20px;
+  width: 100%;
+  bottom: 0px;
+  right: 0px;
+  left: 0px;
+}
+
+#scroll {
+ position: absolute;
+ width: 100%;
+ background-color: black;
+ color: white;
+ height: 20px;
+ font-size: 19px;
+}​
+
+	</style>
+	</head>
+	<body bgcolor="#000">
+		<font color="#fff">
+		<time id="timestamp"></time>
+		</font>
+		
+		<div id="weather"></div>
+		
+	<div id="scrollContainer"></div>
+	<div id="digitalClock"></div>
+<div class="clockContainer">		
+<div id="clock">
+    <div class="digit" style="left:56px;top:0px;"><span>12</span></div>
+    <div class="digit" style="left:84px;top:7.50px;">1</div>
+<!--    <div class="sec" style="-webkit-transform:rotate(246deg);"><div class="clockwise"></div></div>
+    <div class="min" style="-webkit-transform:rotate(270deg);"><div class="clockwise"></div></div>
+    <div class="hour" style="-webkit-transform:rotate(412.5deg);"><div class="clockwise"></div></div>
+-->    
+<div class="time"></div>
+    <div class="innerCenter"></div>
+</div>
+</div>
+
+	<script src="socket.io/socket.io.js"></script>
+	<script src="http://sponji.wtf.im/jquery-1.7.1.min.js"></script>
+	<script src="http://sponji.wtf.im/jquery.backstretch.min.js"></script>
+	<script src="http://sponji.wtf.im/jquery.simpleWeather.js"></script>
+	<script>
+	
+	// creating a new websocket
+	var socket = io.connect('http://sponji.wtf.im:8000');
+	// on every message recived we print the new datas inside the #container div
+	socket.on('notification', function (data) {
+		// convert the json string into a valid javascript object
+		var _data = JSON.parse(data);
+		//$('#streamimage').attr("src",_data.opt.video);
+                //$('time').html('Last notice:' + new Date());
+		//showNotificationBar(_data.opt.user + ": " + _data.opt.message, _data.opt.duration, _data.opt.bgColor, _data.opt.txtColor, _data.opt.height);
+		var notify     = _data.opt.notify !== 'undefined' ? _data.opt.notify : "on";
+		var duration = _data.opt.duration !== 'undefined' ? _data.opt.duration : 2500;
+    		var bgColor  = _data.opt.bgColor !== 'undefined' ? _data.opt.bgColor : "#F4E0E1";
+    		var txtColor = _data.opt.txtColor !== 'undefined' ? _data.opt.txtColor : "#A42732";
+    		var height   = _data.opt.height !== 'undefined' ? _data.opt.height : 40;
+		var width    = _data.opt.width !== 'undefined' ? _data.opt.width : 100;
+                var message  = _data.opt.message !== 'undefined' ? _data.opt.message : "";
+                var user     = _data.opt.user !== 'undefined' ? _data.opt.user : "";
+		var fontsize = _data.opt.fontsize !== 'undefined' ? _data.opt.fontsize : 9;
+		var stream     = _data.opt.stream !== 'undefined' ? _data.opt.stream : "off";
+		var geolocation     = _data.opt.geolocation !== 'undefined' ? _data.opt.geolocation : "on";
+		var forecast     = _data.opt.forecast !== 'undefined' ? _data.opt.forecast : "off";
+		var weather     = _data.opt.weather !== 'undefined' ? _data.opt.weather : "on";
+		var area     = _data.opt.area !== 'undefined' ? _data.opt.area : "Seattle, Wa";
+		var timestamp     = _data.opt.timestamp !== 'undefined' ? _data.opt.timestamp : "off";
+		var video    = _data.opt.video !== 'undefined' ? _data.opt.video : "http://sponji.wtf.im:9000/?action=stream";
+		var image    = _data.opt.image !== 'undefined' ? _data.opt.image : "http://dl.dropbox.com/u/515046/www/garfield-interior.jpg";
+		var cssright    = _data.opt.right !== 'undefined' ? _data.opt.right : 0;
+		var background    = _data.opt.background !== 'undefined' ? _data.opt.background : "on";
+		var analog     = _data.opt.analog !== 'undefined' ? _data.opt.analog : "on";
+		var digital     = _data.opt.digital !== 'undefined' ? _data.opt.digital : "on";
+		var clock     = _data.opt.clock !== 'undefined' ? _data.opt.clock : "on";	
+		var trueOrfalse = false;
+		
+		if (analog == "off") {
+			$("#clock").hide();
+			if (digital == "on") {
+				$("#digitalClock").show();
+			} else {
+				$("#digitalClock").hide();
+			}
+		} else {
+			$("#clock").show();
+		}
+		if (digital == "on") {
+			trueOrfalse = true;
+		} else {
+			trueOrfalse = false;
+		}	
+		
+		if (notify == "on") {
+			$('#notification-bar').hide();
+			$('#notification-bar').html('');
+			var HTMLmessage = "<div class='notification-message' style='text-align:center; font-size: " 
+			+ fontsize +"; line-height: " + height + "px;'> " + user + ": "+ message + " </div>";
+        		$('body').prepend("<div id='notification-bar' style='display:none; width:"+ width +"; height:" 
+			+ height + "px; background-color: " + bgColor + "; right: "+ cssright +"; position: fixed; z-index: 100; color: " 
+			+ txtColor + ";border-bottom: 1px solid " + txtColor + ";'>" + HTMLmessage + "</div>");
+			$('#notification-bar').show();
+			$('#notification-bar').slideDown(function() {
+                		setTimeout(function() {
+                        		$('#notification-bar').slideUp(function() {});
+                		}, duration);
+        		});
+		}
+		if (timestamp == "on") {
+			$('time').html('Last notice:' + new Date());	
+			$('#timestamp').show();
+		} else {
+			$('time').html('');
+			$('#timestamp').hide();
+		}
+		if (stream == "on") {
+			//var newElement = '<embed scr="'+ _data.opt.video +'" id="streamimage" type="application/x-shockwave-flash" wmode="transparent" >';
+			//console.log(newElement);
+			//$('#streamimage').remove();
+			//$('#streamwrap2').append(newElement);
+			$('#streamimage').attr("src",_data.opt.video);
+			$('#streamimage').show();
+		} else {
+			$('#streamimage').attr("src", "");
+			$('#streamimage').hide();
+		}
+		if (weather == "on") {
+			$('#weather').show();
+		} else {
+			$('#scrollContainer').hide();
+			$('#weather').hide();
+		}
+		if (geolocation == "on") {
+			$('#scrollContainer').hide();
+			$('#weather').show();
+			navigator.geolocation.getCurrentPosition(function(position) {
+    				loadWeather(position.coords.latitude+','+position.coords.longitude); //load weather using your lat/lng coordinates
+  			});
+
+
+		function loadWeather(location, woeid) {
+  			$.simpleWeather({
+    				location: location,
+    				woeid: woeid,
+    				unit: 'f',
+    				success: function(weather) {
+      					html = '<h2>'+weather.temp+'&deg; <i class="icon-'+weather.code+'"></i> </h2>';
+      					html += '<ul><li>'+weather.city+', '+weather.region+'</li>';
+      					html += '<li class="currently">'+weather.currently+'</li>';
+      					html += '<li>'+weather.temp+'&deg;</li></ul>';  
+      
+      					$("#weather").html(html);
+    				},
+    				error: function(error) {
+      					$("#weather").html('<p>'+error+'</p>');
+    				}
+  			});	
+     		}
+    	}		
+		if (background == "on") {
+			$.backstretch(image);
+		} else {
+			$.backstretch().remove();
+			$("body").css("background-color", "black");	
+		}
+
+if(weather == "on" && geolocation == "off" && forecast == "off") {
+  $("#scrollContainer").hide();
+  $.simpleWeather({
+    location: area,
+    woeid: '',
+    unit: 'f',
+    success: function(weather) {
+      html = '<h2>'+weather.temp+'&deg;<i class="icon-'+weather.code+'"></i> </h2>';
+      html += '<ul><li>'+weather.city+', '+weather.region+'</li>';
+      html += '<li class="currently">'+weather.currently+'</li>';
+      html += '<li>'+weather.wind.direction+' '+weather.wind.speed+' '+weather.units.speed+'</li></ul>';
+  
+      $("#weather").html(html);
+    },
+    error: function(error) {
+      $("#weather").html('<p>'+error+'</p>');
+    }
+  });
+} else if (forecast == "on") {
+	if (location != 'undefined') {
+		//area = location;
+	}
+	$.simpleWeather({
+    		location: area,
+    		woeid: '',
+		unit: 'f',
+    		success: function(weather) {
+      		html = '<h2>'+weather.temp+'&deg;<i class="icon-'+weather.code+'"></i></h2>';
+      		html += '<ul><li>'+weather.city+', '+weather.region+'</li>';
+      		html += '<li class="currently">'+weather.currently+'</li>';
+      		html += '<li>'+weather.temp+'&deg;f</li></ul>';
+      		forecast = '<marquee id="scroll" behavior="scroll" direction="left">';
+			for(var i=0;i<weather.forecast.length;i++) {
+                        forecast += ' '+ weather.forecast[i].day
+                                    +': '
+                                    + weather.forecast[i].text 
+                                    + ' High:'
+                                    + weather.forecast[i].high
+                                    + ' Low:'
+                                    + weather.forecast[i].low + ' ';
+                }  
+		forecast += '</marquee>';
+      		$("#weather").html(html);
+		//$("#weather").fadeIn(html);
+		$("#scrollContainer").html(forecast);
+		//$('#scrollContainer').fadeIn();
+    },
+    error: function(error) {
+      $("#weather").html('<p>'+error+'</p>');
+    }
+  });
+ 
+ } 
+});
+
+
+
+
+(function($) {
+
+  function displayTime() {
+    var currentTime = new Date();
+    var hours = currentTime.getHours();
+    var minutes = currentTime.getMinutes();
+
+    var clockDiv = document.getElementById('digitalClock');
+    if (minutes < 10) {
+	minutes = "0"+ minutes;
+    }	
+    if (hours > 12) {
+        hours = hours - 12;
+    }
+    if (hours === 0) {
+        hours = 12;    
+    }
+    clockDiv.innerText = hours + ":" + minutes;
+  }
+
+  setInterval(displayTime, 1000);
+
+    
+    Number.prototype.padTime = function() { return (this < 10 ? '0'+this : this); };
+    
+    $.fn.extend({ // Extend jQuery with custom plugin
+        
+        rotate: function(degree) { // Cross browser rotate
+            return this.each(function() {
+                var rotate = 'rotate('+degree+'deg)';
+                return $(this).css({
+                    '-moz-transform':rotate,
+                    '-webkit-transform':rotate,
+                    '-ms-transform':rotate,
+                    '-o-transform':rotate,
+                    transform:rotate
+                });
+            });
+         },
+        
+         analogueClock: function(options) { // Analogue Clock plugin
+            
+            options = $.extend({ // Default values
+                withHours:true, // Print digit time ?
+                withDigitalTime:true, // Print time (digital) in center
+                digitBoxWidth:20 // div.digit width : cf. css
+            }, options || {});
+             
+            return this.each(function() {
+                var $clock = $(this);
+                
+                // Built analog digits number
+                if (options.withHours) { 
+                    var plotsNum = 12, // 12 hours digits, normally ^^
+                        increase = Math.PI * 2 / plotsNum, // cheeseCake
+                        angle = -(increase * 3), // rotate midnight at top
+                        clockCenter = parseInt($clock.innerWidth(), 10) / 2 - (options.digitBoxWidth / 2),
+                        digitsHtml = '';
+                    for (var i = 0; i < plotsNum; i++) {
+                        var x = clockCenter * Math.cos(angle) + clockCenter,
+                            y = clockCenter * Math.sin(angle) + clockCenter;
+                        digitsHtml += '<div class="digit" style="left:'+x+'px;top:'+y+'px;">'+
+                            (i % 3 == 0 ? '<span>'+(i == 0 ? plotsNum : i)+'</span>' : i) 
+                                      +'</div>';
+                        angle += increase;
+                    }
+                    $clock.append(digitsHtml);
+                }
+                
+                // Buil clockwise
+                var $sec = $('<div class="sec"><div class="clockwise"></div></div>').appendTo($clock),
+                    $min = $('<div class="min"><div class="clockwise"></div></div>').appendTo($clock),
+                    $hour = $('<div class="hour"><div class="clockwise"></div></div>').appendTo($clock),
+                    $time = (options.withDigitalTime ? $('<div class="time">00:00:00</div>').appendTo($clock) : null),
+                    $innerCenter = $('<div class="innerCenter"></div>').appendTo($clock);
+                
+                // Animate clockwise
+                var timer = function() {
+                    var now = new Date(),
+                        seconds = now.getSeconds(),
+                        mins = now.getMinutes(),
+                        hours = now.getHours();
+                    $sec.rotate(seconds * 6); // 60 * 6 == 360°
+                    $min.rotate(mins * 6);
+                    $hour.rotate(hours * 30 + (mins / 2));
+                    if (options.withDigitalTime)
+                        $time.html(hours.padTime()+':'+mins.padTime()+':'+seconds.padTime());
+                    setTimeout(timer, 300); // precision 300ms
+                };
+                timer(); // init !
+                return $(this);
+            });
+        }
+    });
+  })(jQuery);
+ $('div#clock').analogueClock({digitBoxWidth:18, withDigitalTime:false});
+	</script>
+	<div class="streaming">
+                 <p class="xform-p"></p>
+                            <p id="streamwrap" class="xform-p">
+                                        <img id="streamimage" class="xform" src="" />
+                             </p>
+                 
+        </div>  
+	</body>
+</html>
+

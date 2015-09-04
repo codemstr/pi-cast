@@ -1,0 +1,26 @@
+<opt>
+  <analog>on</analog>
+  <area>982101</area>
+  <background>on</background>
+  <bgColor>yellow</bgColor>
+  <clock>on</clock>
+  <digital>off</digital>
+  <duration>15000</duration>
+  <fontsize>28</fontsize>
+  <forecast>on</forecast>
+  <geolocation>off</geolocation>
+  <height>50</height>
+  <image>http://paste.wtf.im/images/nh-pluto-in-false-color.jpg</image>
+  <left>0</left>
+  <location>Bellingham, WA</location>
+  <message>*** ALERT *** Lights turned on by remote.</message>
+  <notify>off</notify>
+  <right>0px</right>
+  <stream>off</stream>
+  <timestamp>off</timestamp>
+  <txtColor>black</txtColor>
+  <user>Security</user>
+  <video>http://192.168.254.21:9000/?action=stream</video>
+  <weather>on</weather>
+  <width>100%</width>
+</opt>
